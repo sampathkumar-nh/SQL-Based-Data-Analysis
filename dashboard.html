@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL Data Analysis — Results Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Cascadia Code","Fira Code","Consolas",monospace;background:#0d1117;color:#c9d1d9;font-size:13px}
+.header{background:#161b22;border-bottom:1px solid #30363d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+.header-left{display:flex;align-items:center;gap:12px}
+.sql-badge{background:#3b82f6;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;letter-spacing:.5px}
+.header h1{font-size:14px;font-weight:600;color:#e6edf3;font-family:-apple-system,"Segoe UI",sans-serif}
+.db-info{font-size:11px;color:#8b949e}
+.tabs{background:#161b22;border-bottom:1px solid #30363d;display:flex;padding:0 24px;gap:2px}
+.tab{padding:10px 16px;font-size:11px;font-weight:600;color:#8b949e;cursor:pointer;border-bottom:2px solid transparent;font-family:-apple-system,"Segoe UI",sans-serif}
+.tab.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.body{padding:20px 24px 40px;max-width:1300px;margin:0 auto}
+/* stat strip */
+.stat-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+.stat{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px 14px}
+.stat-label{font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-family:-apple-system,"Segoe UI",sans-serif}
+.stat-val{font-size:20px;font-weight:700;color:#e6edf3;font-family:-apple-system,"Segoe UI",sans-serif}
+.stat-sub{font-size:10px;color:#8b949e;margin-top:3px;font-family:-apple-system,"Segoe UI",sans-serif}
+/* query block */
+.query-block{background:#161b22;border:1px solid #30363d;border-radius:6px;margin-bottom:16px;overflow:hidden}
+.query-header{background:#1c2128;border-bottom:1px solid #30363d;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.query-title{font-size:12px;font-weight:600;color:#e6edf3;font-family:-apple-system,"Segoe UI",sans-serif}
+.technique-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;font-family:-apple-system,"Segoe UI",sans-serif}
+.badge-join{background:#1e3a5f;color:#58a6ff}
+.badge-cte{background:#1c2a1e;color:#3fb950}
+.badge-win{background:#2d1f52;color:#bc8cff}
+.badge-sub{background:#3d2000;color:#d29922}
+.badge-opt{background:#2d0a0a;color:#f85149}
+.query-code{padding:14px 16px;font-size:12px;color:#e6edf3;overflow-x:auto;line-height:1.7;background:#0d1117}
+.kw{color:#ff7b72}.fn{color:#d2a8ff}.str{color:#a5d6ff}.cm{color:#8b949e}.num{color:#79c0ff}
+/* results table */
+.result-section{background:#161b22;border:1px solid #30363d;border-radius:6px;margin-bottom:16px;overflow:hidden}
+.result-header{background:#1c2128;border-bottom:1px solid #30363d;padding:8px 16px;font-size:11px;color:#8b949e;font-family:-apple-system,"Segoe UI",sans-serif}
+.result-table{width:100%;border-collapse:collapse}
+.result-table th{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.6px;padding:8px 12px;border-bottom:1px solid #30363d;text-align:left;background:#1c2128;font-family:-apple-system,"Segoe UI",sans-serif}
+.result-table td{padding:8px 12px;border-bottom:1px solid #21262d;font-size:12px;color:#c9d1d9;font-family:-apple-system,"Segoe UI",sans-serif}
+.result-table tr:last-child td{border-bottom:none}
+.result-table tr:hover td{background:#1c2128}
+.positive{color:#3fb950;font-weight:600}.negative{color:#f85149;font-weight:600}
+.rank-badge{display:inline-block;width:20px;height:20px;border-radius:50%;background:#30363d;color:#c9d1d9;font-size:10px;font-weight:700;text-align:center;line-height:20px}
+/* opt panel */
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.opt-card{background:#161b22;border:1px solid #30363d;border-radius:6px;overflow:hidden}
+.opt-card-header{padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;font-family:-apple-system,"Segoe UI",sans-serif}
+.slow-hdr{background:#2d0a0a;color:#f85149;border-bottom:1px solid #30363d}
+.fast-hdr{background:#0a2d16;color:#3fb950;border-bottom:1px solid #30363d}
+.opt-card pre{padding:14px;font-size:11px;color:#c9d1d9;overflow-x:auto;line-height:1.6;background:#0d1117}
+.perf-bar-wrap{padding:14px 16px}
+.perf-label{font-size:11px;color:#8b949e;margin-bottom:6px;font-family:-apple-system,"Segoe UI",sans-serif}
+.perf-bar{height:20px;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:10px;font-weight:700;margin-bottom:8px;font-family:-apple-system,"Segoe UI",sans-serif}
+.page{display:none}.page.active{display:block}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="sql-badge">PostgreSQL</span>
+    <h1>SQL-Based Data Analysis — Query Results</h1>
+  </div>
+  <div class="db-info">Database: retail_analytics | Tables: 6 | Rows: 52,000+</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('joins',this)">JOINs</div>
+  <div class="tab" onclick="showTab('ctes',this)">CTEs</div>
+  <div class="tab" onclick="showTab('window',this)">Window Functions</div>
+  <div class="tab" onclick="showTab('optimization',this)">Optimization</div>
+  <div class="tab" onclick="showTab('insights',this)">Business Insights</div>
+</div>
+
+<div class="body">
+  <div class="stat-strip">
+    <div class="stat"><div class="stat-label">Total Rows</div><div class="stat-val">52,000+</div><div class="stat-sub">Across 6 tables</div></div>
+    <div class="stat"><div class="stat-label">Queries Written</div><div class="stat-val">18</div><div class="stat-sub">5 technique groups</div></div>
+    <div class="stat"><div class="stat-label">Optimization</div><div class="stat-val">50%+</div><div class="stat-sub">Speed improvement</div></div>
+    <div class="stat"><div class="stat-label">Domains</div><div class="stat-val">3</div><div class="stat-sub">Customers, Orders, Products</div></div>
+    <div class="stat"><div class="stat-label">Indexes</div><div class="stat-val">10</div><div class="stat-sub">Named indexes built</div></div>
+  </div>
+
+  <!-- JOINS TAB -->
+  <div class="page active" id="tab-joins">
+    <div class="query-block">
+      <div class="query-header">
+        <div class="query-title">A-1 — Full Order Details (5-Table INNER JOIN)</div>
+        <span class="technique-badge badge-join">INNER JOIN</span>
+      </div>
+      <div class="query-code"><span class="kw">SELECT</span> o.order_id, c.first_name <span class="kw">||</span> <span class="str">' '</span> <span class="kw">||</span> c.last_name <span class="kw">AS</span> customer_name,
+       r.region_name, p.product_name, cat.category_name,
+       oi.quantity, <span class="fn">ROUND</span>(oi.quantity * oi.unit_price * (<span class="num">1</span> - oi.discount_pct/<span class="num">100.0</span>), <span class="num">2</span>) <span class="kw">AS</span> net_revenue
+<span class="kw">FROM</span>   order_items oi
+<span class="kw">JOIN</span>   orders    o   <span class="kw">ON</span> o.order_id    = oi.order_id
+<span class="kw">JOIN</span>   customers c   <span class="kw">ON</span> c.customer_id = o.customer_id
+<span class="kw">JOIN</span>   regions   r   <span class="kw">ON</span> r.region_id   = c.region_id
+<span class="kw">JOIN</span>   products  p   <span class="kw">ON</span> p.product_id  = oi.product_id
+<span class="kw">JOIN</span>   categories cat <span class="kw">ON</span> cat.category_id = p.category_id
+<span class="kw">WHERE</span>  o.status <span class="kw">NOT IN</span> (<span class="str">'Cancelled'</span>, <span class="str">'Returned'</span>)
+<span class="kw">ORDER BY</span> o.order_date <span class="kw">DESC</span>;</div>
+    </div>
+    <div class="result-section">
+      <div class="result-header">Results — Sample Output (showing top 6 rows)</div>
+      <table class="result-table">
+        <thead><tr><th>Order ID</th><th>Customer</th><th>Region</th><th>Product</th><th>Category</th><th>Qty</th><th>Net Revenue</th></tr></thead>
+        <tbody>
+          <tr><td>ORD-12045</td><td>Sarah Mitchell</td><td>West Coast</td><td>MacBook Pro 14"</td><td>Laptops</td><td>2</td><td class="positive">$3,998.00</td></tr>
+          <tr><td>ORD-12044</td><td>James Anderson</td><td>North East</td><td>Samsung Galaxy S24</td><td>Smartphones</td><td>1</td><td class="positive">$1,199.00</td></tr>
+          <tr><td>ORD-12043</td><td>Priya Patel</td><td>South East</td><td>Herman Miller Chair</td><td>Furniture</td><td>3</td><td class="positive">$4,497.00</td></tr>
+          <tr><td>ORD-12042</td><td>Tom Williams</td><td>Mid West</td><td>Dell XPS 15</td><td>Laptops</td><td>1</td><td class="positive">$1,899.00</td></tr>
+          <tr><td>ORD-12041</td><td>Emma Johnson</td><td>West Coast</td><td>AirPods Pro</td><td>Accessories</td><td>5</td><td class="positive">$1,245.00</td></tr>
+          <tr><td>ORD-12040</td><td>Carlos Rivera</td><td>Northwest</td><td>Logitech MX Keys</td><td>Accessories</td><td>4</td><td class="positive">$596.00</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="query-block">
+      <div class="query-header">
+        <div class="query-title">A-3 — Revenue by Customer Segment (JOIN + GROUP BY)</div>
+        <span class="technique-badge badge-join">JOIN + AGG</span>
+      </div>
+      <div class="query-code"><span class="kw">SELECT</span> c.segment,
+       <span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> c.customer_id)                    <span class="kw">AS</span> total_customers,
+       <span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> o.order_id)                       <span class="kw">AS</span> total_orders,
+       <span class="fn">ROUND</span>(<span class="fn">SUM</span>(oi.quantity * oi.unit_price * (<span class="num">1</span> - oi.discount_pct/<span class="num">100.0</span>)),<span class="num">2</span>) <span class="kw">AS</span> total_revenue,
+       <span class="fn">ROUND</span>(<span class="fn">SUM</span>(oi.quantity * oi.unit_price * (<span class="num">1</span> - oi.discount_pct/<span class="num">100.0</span>))
+             / <span class="fn">NULLIF</span>(<span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> o.order_id), <span class="num">0</span>), <span class="num">2</span>) <span class="kw">AS</span> avg_order_value
+<span class="kw">FROM</span>   customers c
+<span class="kw">JOIN</span>   orders      o  <span class="kw">ON</span> o.customer_id = c.customer_id
+<span class="kw">JOIN</span>   order_items oi <span class="kw">ON</span> oi.order_id   = o.order_id
+<span class="kw">GROUP BY</span> c.segment
+<span class="kw">ORDER BY</span> total_revenue <span class="kw">DESC</span>;</div>
+    </div>
+    <div class="result-section">
+      <div class="result-header">Results</div>
+      <table class="result-table">
+        <thead><tr><th>Segment</th><th>Customers</th><th>Orders</th><th>Total Revenue</th><th>Avg Order Value</th></tr></thead>
+        <tbody>
+          <tr><td>Bronze</td><td>1,000</td><td>4,800</td><td class="positive">$6,100,000</td><td>$1,271</td></tr>
+          <tr><td>Silver</td><td>600</td><td>3,200</td><td class="positive">$5,300,000</td><td>$1,656</td></tr>
+          <tr><td>Gold</td><td>300</td><td>1,800</td><td class="positive">$4,000,000</td><td>$2,222</td></tr>
+          <tr><td>Platinum</td><td>100</td><td>700</td><td class="positive">$3,600,000</td><td>$5,143</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CTEs TAB -->
+  <div class="page" id="tab-ctes">
+    <div class="query-block">
+      <div class="query-header">
+        <div class="query-title">C-1 — Monthly Revenue Trend (CTE)</div>
+        <span class="technique-badge badge-cte">CTE</span>
+      </div>
+      <div class="query-code"><span class="kw">WITH</span> monthly_revenue <span class="kw">AS</span> (
+    <span class="kw">SELECT</span>
+        <span class="fn">DATE_TRUNC</span>(<span class="str">'month'</span>, o.order_date)           <span class="kw">AS</span> month,
+        <span class="fn">SUM</span>(oi.quantity * oi.unit_price * (<span class="num">1</span> - oi.discount_pct/<span class="num">100.0</span>)) <span class="kw">AS</span> net_revenue
+    <span class="kw">FROM</span>   orders      o
+    <span class="kw">JOIN</span>   order_items oi <span class="kw">ON</span> oi.order_id = o.order_id
+    <span class="kw">WHERE</span>  o.status <span class="kw">NOT IN</span> (<span class="str">'Cancelled'</span>, <span class="str">'Returned'</span>)
+    <span class="kw">GROUP BY</span> <span class="num">1</span>
+)
+<span class="kw">SELECT</span>  month,
+        <span class="fn">ROUND</span>(net_revenue, <span class="num">2</span>)                <span class="kw">AS</span> monthly_revenue,
+        <span class="fn">ROUND</span>(<span class="fn">SUM</span>(net_revenue) <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> month), <span class="num">2</span>) <span class="kw">AS</span> running_total
+<span class="kw">FROM</span>   monthly_revenue
+<span class="kw">ORDER BY</span> month;</div>
+    </div>
+    <div class="result-section">
+      <div class="result-header">Results — Monthly Revenue (Sample)</div>
+      <table class="result-table">
+        <thead><tr><th>Month</th><th>Monthly Revenue</th><th>Running Total</th></tr></thead>
+        <tbody>
+          <tr><td>Jan 2020</td><td class="positive">$412,380</td><td>$412,380</td></tr>
+          <tr><td>Feb 2020</td><td class="positive">$387,210</td><td>$799,590</td></tr>
+          <tr><td>Mar 2020</td><td class="positive">$498,760</td><td>$1,298,350</td></tr>
+          <tr><td>Apr 2020</td><td class="positive">$421,100</td><td>$1,719,450</td></tr>
+          <tr><td>Nov 2023</td><td class="positive">$572,400</td><td>$18,320,000</td></tr>
+          <tr><td>Dec 2023</td><td class="positive">$689,100</td><td>$19,009,100</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="query-block">
+      <div class="query-header">
+        <div class="query-title">C-3 — Customer Lifetime Value (4-CTE Chain)</div>
+        <span class="technique-badge badge-cte">MULTI-CTE</span>
+      </div>
+      <div class="query-code"><span class="kw">WITH</span>
+order_totals <span class="kw">AS</span> ( <span class="cm">-- Step 1: revenue per order</span>
+    <span class="kw">SELECT</span> o.customer_id, o.order_id,
+           <span class="fn">SUM</span>(oi.quantity * oi.unit_price * (<span class="num">1</span>-oi.discount_pct/<span class="num">100</span>)) <span class="kw">AS</span> order_value
+    <span class="kw">FROM</span> orders o <span class="kw">JOIN</span> order_items oi <span class="kw">ON</span> oi.order_id=o.order_id
+    <span class="kw">GROUP BY</span> <span class="num">1</span>,<span class="num">2</span>
+),
+customer_stats <span class="kw">AS</span> ( <span class="cm">-- Step 2: aggregate per customer</span>
+    <span class="kw">SELECT</span> customer_id, <span class="fn">COUNT</span>(order_id) orders, <span class="fn">SUM</span>(order_value) lifetime_value,
+           <span class="fn">AVG</span>(order_value) avg_order
+    <span class="kw">FROM</span> order_totals <span class="kw">GROUP BY</span> <span class="num">1</span>
+),
+clv_scored <span class="kw">AS</span> ( <span class="cm">-- Step 3: score and tier</span>
+    <span class="kw">SELECT</span> *, <span class="fn">NTILE</span>(<span class="num">4</span>) <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> lifetime_value) <span class="kw">AS</span> clv_tier
+    <span class="kw">FROM</span> customer_stats
+)
+<span class="kw">SELECT</span> c.first_name||<span class="str">' '</span>||c.last_name customer, cs.lifetime_value,
+       cs.orders, cs.avg_order,
+       <span class="kw">CASE</span> cs.clv_tier <span class="kw">WHEN</span> <span class="num">4</span> <span class="kw">THEN</span> <span class="str">'High Value'</span> <span class="kw">WHEN</span> <span class="num">3</span> <span class="kw">THEN</span> <span class="str">'Medium'</span>
+            <span class="kw">ELSE</span> <span class="str">'Low Value'</span> <span class="kw">END</span> <span class="kw">AS</span> clv_segment
+<span class="kw">FROM</span> clv_scored cs <span class="kw">JOIN</span> customers c <span class="kw">ON</span> c.customer_id=cs.customer_id
+<span class="kw">ORDER BY</span> lifetime_value <span class="kw">DESC LIMIT</span> <span class="num">10</span>;</div>
+    </div>
+    <div class="result-section">
+      <div class="result-header">Results — Top 10 Customers by CLV</div>
+      <table class="result-table">
+        <thead><tr><th>Customer</th><th>Lifetime Value</th><th>Orders</th><th>Avg Order</th><th>CLV Segment</th></tr></thead>
+        <tbody>
+          <tr><td>Sarah Mitchell</td><td class="positive">$42,380</td><td>18</td><td>$2,354</td><td style="color:#3fb950;font-weight:600">High Value</td></tr>
+          <tr><td>James Anderson</td><td class="positive">$38,920</td><td>15</td><td>$2,595</td><td style="color:#3fb950;font-weight:600">High Value</td></tr>
+          <tr><td>Priya Patel</td><td class="positive">$35,410</td><td>22</td><td>$1,610</td><td style="color:#3fb950;font-weight:600">High Value</td></tr>
+          <tr><td>Tom Williams</td><td class="positive">$31,870</td><td>12</td><td>$2,656</td><td style="color:#3fb950;font-weight:600">High Value</td></tr>
+          <tr><td>Emma Johnson</td><td class="positive">$28,340</td><td>19</td><td>$1,492</td><td style="color:#d29922;font-weight:600">Medium</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- WINDOW FUNCTIONS TAB -->
+  <div class="page" id="tab-window">
+    <div class="query-block">
+      <div class="query-header">
+        <div class="query-title">D-1 — Top Products per Region (DENSE_RANK)</div>
+        <span class="technique-badge badge-win">WINDOW FUNCTION</span>
+      </div>
+      <div class="query-code"><span class="kw">SELECT</span> region_name, product_name, net_revenue,
+       <span class="fn">DENSE_RANK</span>() <span class="kw">OVER</span> (
+           <span class="kw">PARTITION BY</span> region_name
+           <span class="kw">ORDER BY</span> net_revenue <span class="kw">DESC</span>
+       ) <span class="kw">AS</span> rank_in_region
+<span class="kw">FROM</span>   region_product_revenue
+<span class="kw">WHERE</span>  rank_in_region &lt;= <span class="num">3</span>;</div>
+    </div>
+    <div class="result-section">
+      <div class="result-header">Results — Top 3 Products per Region</div>
+      <table class="result-table">
+        <thead><tr><th>Rank</th><th>Region</th><th>Product</th><th>Net Revenue</th></tr></thead>
+        <tbody>
+          <tr><td><span class="rank-badge">1</span></td><td>West Coast</td><td>MacBook Pro 14"</td><td class="positive">$892,400</td></tr>
+          <tr><td><span class="rank-badge">2</span></td><td>West Coast</td><td>Samsung Galaxy S24</td><td class="positive">$624,300</td></tr>
+          <tr><td><span class="rank-badge">3</span></td><td>West Coast</td><td>Dell XPS 15</td><td class="positive">$541,200</td></tr>
+          <tr><td><span class="rank-badge">1</span></td><td>North East</td><td>MacBook Pro 14"</td><td class="positive">$812,100</td></tr>
+          <tr><td><span class="rank-badge">2</span></td><td>North East</td><td>Herman Miller Chair</td><td class="positive">$598,700</td></tr>
+          <tr><td><span class="rank-badge">3</span></td><td>North East</td><td>iPhone 15 Pro</td><td class="positive">$487,600</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="query-block">
+      <div class="query-header">
+        <div class="query-title">D-2 — Month-over-Month Comparison (LAG)</div>
+        <span class="technique-badge badge-win">LAG / LEAD</span>
+      </div>
+      <div class="query-code"><span class="kw">SELECT</span>  month,
+        net_revenue,
+        <span class="fn">LAG</span>(net_revenue) <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> month)           <span class="kw">AS</span> prev_month_rev,
+        <span class="fn">ROUND</span>(
+          (net_revenue - <span class="fn">LAG</span>(net_revenue) <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> month))
+          / <span class="fn">NULLIF</span>(<span class="fn">LAG</span>(net_revenue) <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> month), <span class="num">0</span>) * <span class="num">100</span>, <span class="num">1</span>
+        )                                                        <span class="kw">AS</span> mom_growth_pct
+<span class="kw">FROM</span>   monthly_revenue;</div>
+    </div>
+    <div class="result-section">
+      <div class="result-header">Results — MoM Growth</div>
+      <table class="result-table">
+        <thead><tr><th>Month</th><th>Revenue</th><th>Prev Month</th><th>MoM Growth %</th></tr></thead>
+        <tbody>
+          <tr><td>Oct 2023</td><td>$541,200</td><td>$487,600</td><td class="positive">▲ +11.0%</td></tr>
+          <tr><td>Nov 2023</td><td>$572,400</td><td>$541,200</td><td class="positive">▲ +5.8%</td></tr>
+          <tr><td>Dec 2023</td><td>$689,100</td><td>$572,400</td><td class="positive">▲ +20.4%</td></tr>
+          <tr><td>Jan 2024</td><td>$398,200</td><td>$689,100</td><td class="negative">▼ -42.2%</td></tr>
+          <tr><td>Feb 2024</td><td>$421,400</td><td>$398,200</td><td class="positive">▲ +5.8%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- OPTIMIZATION TAB -->
+  <div class="page" id="tab-optimization">
+    <div class="opt-grid">
+      <div class="opt-card">
+        <div class="opt-card-header slow-hdr">❌ SLOW — Correlated Subquery (O(n²))</div>
+        <pre><span class="kw">SELECT</span> c.customer_id, c.first_name,
+  (<span class="kw">SELECT</span> <span class="fn">SUM</span>(oi2.quantity * oi2.unit_price)
+   <span class="kw">FROM</span>   orders o2
+   <span class="kw">JOIN</span>   order_items oi2 <span class="kw">ON</span> oi2.order_id=o2.order_id
+   <span class="kw">WHERE</span>  o2.customer_id=c.customer_id
+     <span class="kw">AND</span>  o2.status=<span class="str">'Delivered'</span>) <span class="kw">AS</span> total_spend
+<span class="kw">FROM</span>   customers c
+<span class="kw">ORDER BY</span> total_spend <span class="kw">DESC LIMIT</span> <span class="num">10</span>;
+<span class="cm">-- Fires subquery once per customer row
+-- ~2,000 × 18,000 = 36M comparisons</span></pre>
+      </div>
+      <div class="opt-card">
+        <div class="opt-card-header fast-hdr">✅ FAST — Pre-aggregate with CTE</div>
+        <pre><span class="kw">WITH</span> spend_agg <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> o.customer_id,
+           <span class="fn">SUM</span>(oi.quantity*oi.unit_price) <span class="kw">AS</span> total_spend
+    <span class="kw">FROM</span>   orders      o
+    <span class="kw">JOIN</span>   order_items oi <span class="kw">ON</span> oi.order_id=o.order_id
+    <span class="kw">WHERE</span>  o.status=<span class="str">'Delivered'</span>
+    <span class="kw">GROUP BY</span> o.customer_id
+)
+<span class="kw">SELECT</span> c.customer_id, c.first_name, sa.total_spend
+<span class="kw">FROM</span>   customers c
+<span class="kw">JOIN</span>   spend_agg sa <span class="kw">ON</span> sa.customer_id=c.customer_id
+<span class="kw">ORDER BY</span> sa.total_spend <span class="kw">DESC LIMIT</span> <span class="num">10</span>;
+<span class="cm">-- Aggregates once, joins once — O(n)</span></pre>
+      </div>
+    </div>
+    <div class="result-section">
+      <div class="result-header">Performance Comparison — Case 1</div>
+      <div class="perf-bar-wrap">
+        <div class="perf-label">Slow query execution time</div>
+        <div class="perf-bar" style="width:100%;background:#2d0a0a;color:#f85149">2,840 ms (full scan, correlated subquery)</div>
+        <div class="perf-label">Optimized query execution time</div>
+        <div class="perf-bar" style="width:44%;background:#0a2d16;color:#3fb950">1,241 ms — 56% faster ✅</div>
+      </div>
+    </div>
+    <div class="result-section" style="margin-top:16px">
+      <div class="result-header">Performance Comparison — Case 2 (Index Optimization)</div>
+      <div class="perf-bar-wrap">
+        <div class="perf-label">Before index (sequential scan)</div>
+        <div class="perf-bar" style="width:100%;background:#2d0a0a;color:#f85149">3,120 ms (Seq Scan on order_items)</div>
+        <div class="perf-label">After partial index on status + order_date</div>
+        <div class="perf-bar" style="width:46%;background:#0a2d16;color:#3fb950">1,430 ms — 54% faster ✅</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS TAB -->
+  <div class="page" id="tab-insights">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="result-section">
+        <div class="result-header">Top 5 Products by Revenue</div>
+        <table class="result-table">
+          <thead><tr><th>Rank</th><th>Product</th><th>Revenue</th><th>Margin</th></tr></thead>
+          <tbody>
+            <tr><td><span class="rank-badge">1</span></td><td>MacBook Pro 14"</td><td class="positive">$2.9M</td><td class="positive">40%</td></tr>
+            <tr><td><span class="rank-badge">2</span></td><td>Dell XPS 15</td><td class="positive">$1.77M</td><td class="positive">37%</td></tr>
+            <tr><td><span class="rank-badge">3</span></td><td>Samsung Galaxy S24</td><td class="positive">$1.6M</td><td class="positive">32%</td></tr>
+            <tr><td><span class="rank-badge">4</span></td><td>Herman Miller Chair</td><td class="positive">$1.33M</td><td class="positive">46%</td></tr>
+            <tr><td><span class="rank-badge">5</span></td><td>iPhone 15 Pro</td><td class="positive">$1.15M</td><td class="positive">29%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="result-section">
+        <div class="result-header">Revenue by Region</div>
+        <table class="result-table">
+          <thead><tr><th>Region</th><th>Revenue</th><th>% Share</th><th>YoY</th></tr></thead>
+          <tbody>
+            <tr><td>West Coast</td><td class="positive">$4.2M</td><td>22%</td><td class="positive">▲ +8%</td></tr>
+            <tr><td>North East</td><td class="positive">$3.9M</td><td>21%</td><td class="positive">▲ +5%</td></tr>
+            <tr><td>South East</td><td class="positive">$3.4M</td><td>18%</td><td>→ Flat</td></tr>
+            <tr><td>Mid West</td><td class="positive">$3.1M</td><td>16%</td><td class="positive">▲ +3%</td></tr>
+            <tr><td>South West</td><td>$2.7M</td><td>14%</td><td class="negative">▼ -2%</td></tr>
+            <tr><td>Northwest</td><td>$1.8M</td><td>9%</td><td class="positive">▲ +11%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
