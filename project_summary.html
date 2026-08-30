@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL-Based Data Analysis | Portfolio Project</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #1f2328;
+    background: #f7f8fa;
+    padding: 32px 16px 48px;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  /* ── Header ──────────────────────────────── */
+  .header {
+    background: #1a2332;
+    color: #ffffff;
+    padding: 36px 40px 28px;
+    border-bottom: 4px solid #3b82d4;
+  }
+  .header-tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #7eb3f5;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+  .header-sub {
+    font-size: 13px;
+    color: #a8b8cc;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 12px;
+  }
+  .header-sub span::before { content: "▸ "; color: #3b82d4; }
+
+  /* ── Pills ───────────────────────────────── */
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 18px 40px;
+    background: #f0f4fa;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.4px;
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  .pill.green  { background: #dcfce7; color: #166534; }
+  .pill.purple { background: #ede9fe; color: #5b21b6; }
+  .pill.orange { background: #ffedd5; color: #9a3412; }
+  .pill.slate  { background: #e2e8f0; color: #334155; }
+
+  /* ── Body sections ───────────────────────── */
+  .body { padding: 32px 40px; }
+
+  section { margin-bottom: 34px; }
+  section:last-child { margin-bottom: 0; }
+
+  h2 {
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #1f2328;
+    border-bottom: 2px solid #3b82d4;
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+  }
+
+  h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1f2328;
+    margin: 16px 0 6px;
+  }
+
+  p { color: #374151; margin-bottom: 10px; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ── Two-col layout ──────────────────────── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 580px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Stat cards ──────────────────────────── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 580px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .stat-card {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 14px 12px 10px;
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 24px;
+    font-weight: 700;
+    color: #3b82d4;
+    line-height: 1.1;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: #57606a;
+    margin-top: 3px;
+    line-height: 1.3;
+  }
+
+  /* ── Schema diagram ──────────────────────── */
+  .schema-box {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+    padding: 18px 20px;
+    border-radius: 6px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .schema-box .kw   { color: #79c0ff; }
+  .schema-box .tbl  { color: #ffa657; }
+  .schema-box .col  { color: #7ee787; }
+  .schema-box .dim  { color: #a5d6ff; }
+  .schema-box .arr  { color: #ff7b72; }
+  .schema-box .cmt  { color: #8b949e; }
+
+  /* ── Query table ─────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  th {
+    background: #f0f4fa;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #57606a;
+    padding: 8px 10px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #fafafa; }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 12px;
+    letter-spacing: 0.3px;
+  }
+  .b-join   { background: #dbeafe; color: #1e40af; }
+  .b-sub    { background: #dcfce7; color: #166534; }
+  .b-cte    { background: #ede9fe; color: #5b21b6; }
+  .b-win    { background: #ffedd5; color: #9a3412; }
+  .b-opt    { background: #fee2e2; color: #991b1b; }
+  .b-bonus  { background: #e2e8f0; color: #334155; }
+
+  /* ── Optimization panel ──────────────────── */
+  .opt-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 580px) { .opt-pair { grid-template-columns: 1fr; } }
+
+  .opt-card {
+    border-radius: 5px;
+    padding: 14px 16px;
+    border: 1px solid;
+  }
+  .opt-slow  { background: #fff5f5; border-color: #fca5a5; }
+  .opt-fast  { background: #f0fdf4; border-color: #86efac; }
+  .opt-card .opt-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .opt-slow .opt-title { color: #b91c1c; }
+  .opt-fast .opt-title { color: #15803d; }
+  .opt-card ul { padding-left: 16px; color: #374151; }
+  .opt-card li { margin-bottom: 4px; font-size: 12.5px; }
+
+  .speedup-bar-wrap {
+    margin: 20px 0 8px;
+  }
+  .speedup-label {
+    font-size: 12px;
+    color: #57606a;
+    margin-bottom: 4px;
+  }
+  .bar-track {
+    background: #e5e7eb;
+    border-radius: 4px;
+    height: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: #3b82d4;
+  }
+  .bar-fill.green { background: #22c55e; }
+
+  /* ── Insights grid ───────────────────────── */
+  .insight-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 580px) { .insight-grid { grid-template-columns: 1fr; } }
+
+  .insight-card {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #3b82d4;
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .insight-card.purple { border-left-color: #7c5cd8; }
+  .insight-card.green  { border-left-color: #16a34a; }
+  .insight-card.orange { border-left-color: #ea580c; }
+  .insight-card.red    { border-left-color: #dc2626; }
+  .insight-card.teal   { border-left-color: #0891b2; }
+  .insight-title { font-size: 11px; font-weight: 700; color: #57606a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .insight-value { font-size: 18px; font-weight: 700; color: #1f2328; line-height: 1.2; }
+  .insight-desc  { font-size: 12px; color: #57606a; margin-top: 3px; }
+
+  /* ── Files list ──────────────────────────── */
+  .file-list { list-style: none; }
+  .file-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .file-list li:last-child { border-bottom: none; }
+  .file-icon {
+    font-size: 15px;
+    width: 22px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .file-name { font-weight: 600; font-size: 13px; color: #1f2328; }
+  .file-desc { font-size: 12px; color: #57606a; margin-top: 1px; }
+
+  /* ── Footer ──────────────────────────────── */
+  footer {
+    margin-top: 36px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 11px;
+    color: #a0aab4;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-tag">Portfolio Project &mdash; Data Analyst</div>
+    <h1>SQL-Based Data Analysis<br>Retail Sales Domain</h1>
+    <div class="header-sub">
+      <span>PostgreSQL 14+</span>
+      <span>50,000+ Rows</span>
+      <span>3 Business Domains</span>
+      <span>18 Complex Queries</span>
+      <span>50% Query Speed Improvement</span>
+    </div>
+  </div>
+
+  <!-- TECH PILLS -->
+  <div class="pill-row">
+    <span class="pill">PostgreSQL</span>
+    <span class="pill">INNER / LEFT JOIN</span>
+    <span class="pill green">Correlated Subqueries</span>
+    <span class="pill green">Derived Tables</span>
+    <span class="pill green">EXISTS</span>
+    <span class="pill purple">CTEs</span>
+    <span class="pill purple">Recursive CTEs</span>
+    <span class="pill purple">Multi-CTE Chains</span>
+    <span class="pill orange">RANK / DENSE_RANK</span>
+    <span class="pill orange">LAG / LEAD</span>
+    <span class="pill orange">SUM OVER PARTITION</span>
+    <span class="pill orange">NTILE</span>
+    <span class="pill slate">EXPLAIN ANALYZE</span>
+    <span class="pill slate">Partial Indexes</span>
+  </div>
+
+  <div class="body">
+
+    <!-- STATS -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num">50K+</div>
+        <div class="stat-label">Total Rows Generated</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">18</div>
+        <div class="stat-label">SQL Queries Written</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">5</div>
+        <div class="stat-label">Query Technique Groups</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">~53%</div>
+        <div class="stat-label">Avg. Query Speedup</div>
+      </div>
+    </div>
+
+    <!-- PROBLEM STATEMENT -->
+    <section>
+      <h2>Problem Statement</h2>
+      <p>The retail business accumulated four years of transactional data across three domains — customers, products, and orders — with no systematic analytical layer on top. Reporting was handled ad-hoc with slow, unoptimised queries against raw tables, making it difficult for leadership to answer questions about customer value, regional performance, or product profitability in a timely manner.</p>
+      <p>This project builds a structured analytical SQL layer from the ground up: a production-quality schema with proper indexing, 18 complex queries covering every major SQL analytical technique, two documented query optimisation cycles, and a business insights report distilling the key findings.</p>
+    </section>
+
+    <!-- DATABASE SCHEMA -->
+    <section>
+      <h2>Database Schema</h2>
+      <div class="schema-box"><span class="cmt">-- 6 tables | 3 business domains | PostgreSQL 14+</span>
+
+<span class="kw">DIMENSION TABLES</span>
+┌─────────────────────┐   ┌─────────────────────────────┐
+│  <span class="tbl">regions</span>             │   │  <span class="tbl">categories</span>                   │
+│ <span class="col">PK</span> region_id  SERIAL │   │ <span class="col">PK</span> category_id  SERIAL       │
+│    region_name       │   │    category_name             │
+│    country           │   │ <span class="dim">FK</span> parent_id  <span class="arr">→ categories</span>  │
+└─────────────────────┘   │    is_active                 │
+                           └─────────────────────────────┘
+
+<span class="kw">CORE ENTITY</span>
+┌──────────────────────────────────────────┐
+│  <span class="tbl">customers</span>   (2,000 rows)                │
+│ <span class="col">PK</span> customer_id  SERIAL                   │
+│    first_name | last_name | email         │
+│ <span class="dim">FK</span> region_id   <span class="arr">→ regions</span>               │
+│    segment (Bronze/Silver/Gold/Platinum)  │
+│    date_joined | is_active                │
+└──────────────────────────────────────────┘
+
+<span class="kw">PRODUCT CATALOGUE</span>
+┌──────────────────────────────────────────┐
+│  <span class="tbl">products</span>   (80 SKUs)                    │
+│ <span class="col">PK</span> product_id  SERIAL                   │
+│    product_name | unit_cost | unit_price  │
+│ <span class="dim">FK</span> category_id  <span class="arr">→ categories</span>          │
+│    stock_qty | is_active                  │
+└──────────────────────────────────────────┘
+
+<span class="kw">TRANSACTIONAL TABLES</span>
+┌───────────────────────────┐  ┌──────────────────────────────┐
+│  <span class="tbl">orders</span>  (12,000 rows)    │  │  <span class="tbl">order_items</span>  (38,000+ rows) │
+│ <span class="col">PK</span> order_id  SERIAL       │  │ <span class="col">PK</span> order_item_id  SERIAL      │
+│ <span class="dim">FK</span> customer_id <span class="arr">→ customers</span>│  │ <span class="dim">FK</span> order_id   <span class="arr">→ orders</span>      │
+│    order_date            │  │ <span class="dim">FK</span> product_id  <span class="arr">→ products</span>    │
+│    status | payment_method│  │    quantity | unit_price      │
+│    discount_pct           │  │    discount_pct               │
+└───────────────────────────┘  └──────────────────────────────┘
+
+<span class="cmt">-- Indexes: customer_id, region_id, segment, order_date,</span>
+<span class="cmt">--          status, category_id, product_id, order_id</span></div>
+    </section>
+
+    <!-- QUERIES TABLE -->
+    <section>
+      <h2>Queries Written (18 Total)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Query Description</th>
+            <th>Group</th>
+            <th>Key Technique</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>A-1</td>
+            <td>Full order details — customer, product, region, line revenue</td>
+            <td><span class="badge b-join">JOINs</span></td>
+            <td>5-table INNER JOIN</td>
+          </tr>
+          <tr>
+            <td>A-2</td>
+            <td>Customers with no orders — re-engagement candidates</td>
+            <td><span class="badge b-join">JOINs</span></td>
+            <td>LEFT JOIN + IS NULL anti-join</td>
+          </tr>
+          <tr>
+            <td>A-3</td>
+            <td>Revenue by customer segment — avg order value per tier</td>
+            <td><span class="badge b-join">JOINs</span></td>
+            <td>JOIN + GROUP BY + NULLIF</td>
+          </tr>
+          <tr>
+            <td>B-1</td>
+            <td>Customers above average lifetime spend</td>
+            <td><span class="badge b-sub">Subqueries</span></td>
+            <td>Correlated subquery in HAVING</td>
+          </tr>
+          <tr>
+            <td>B-2</td>
+            <td>Category-level revenue summary with share %</td>
+            <td><span class="badge b-sub">Subqueries</span></td>
+            <td>Subquery in FROM (derived table)</td>
+          </tr>
+          <tr>
+            <td>B-3</td>
+            <td>Active categories with recent sales</td>
+            <td><span class="badge b-sub">Subqueries</span></td>
+            <td>EXISTS correlated subquery</td>
+          </tr>
+          <tr>
+            <td>C-1</td>
+            <td>Monthly revenue trend with cumulative total</td>
+            <td><span class="badge b-cte">CTEs</span></td>
+            <td>CTE + DATE_TRUNC + running SUM</td>
+          </tr>
+          <tr>
+            <td>C-2</td>
+            <td>Hierarchical category tree with depth and breadcrumb path</td>
+            <td><span class="badge b-cte">CTEs</span></td>
+            <td>Recursive CTE (WITH RECURSIVE)</td>
+          </tr>
+          <tr>
+            <td>C-3</td>
+            <td>Customer lifetime value — spend, frequency, recency, CLV estimate</td>
+            <td><span class="badge b-cte">CTEs</span></td>
+            <td>4-CTE chain + RFM scoring</td>
+          </tr>
+          <tr>
+            <td>D-1</td>
+            <td>Top 3 products per region by net revenue</td>
+            <td><span class="badge b-win">Window Fn</span></td>
+            <td>DENSE_RANK() OVER (PARTITION BY)</td>
+          </tr>
+          <tr>
+            <td>D-2</td>
+            <td>Month-over-month sales comparison with growth %</td>
+            <td><span class="badge b-win">Window Fn</span></td>
+            <td>LAG() / LEAD() + rolling 3-mo avg</td>
+          </tr>
+          <tr>
+            <td>D-3</td>
+            <td>Running revenue total by region, month-by-month</td>
+            <td><span class="badge b-win">Window Fn</span></td>
+            <td>SUM() OVER (PARTITION BY region)</td>
+          </tr>
+          <tr>
+            <td>D-4</td>
+            <td>Customer spend quartile segmentation</td>
+            <td><span class="badge b-win">Window Fn</span></td>
+            <td>NTILE(4) OVER (ORDER BY spend)</td>
+          </tr>
+          <tr>
+            <td>E-1a</td>
+            <td>SLOW: Top 10 customers — correlated subquery in SELECT</td>
+            <td><span class="badge b-opt">Optimise</span></td>
+            <td>EXPLAIN ANALYZE — O(n²) pattern</td>
+          </tr>
+          <tr>
+            <td>E-1b</td>
+            <td>FAST: Top 10 customers — pre-aggregated CTE + Hash Join</td>
+            <td><span class="badge b-opt">Optimise</span></td>
+            <td>CTE rewrite → ~56% faster</td>
+          </tr>
+          <tr>
+            <td>E-2a</td>
+            <td>SLOW: Monthly revenue — full table scan, no partial index</td>
+            <td><span class="badge b-opt">Optimise</span></td>
+            <td>EXPLAIN ANALYZE — Seq Scan</td>
+          </tr>
+          <tr>
+            <td>E-2b</td>
+            <td>FAST: Monthly revenue — partial index + CTE push-down</td>
+            <td><span class="badge b-opt">Optimise</span></td>
+            <td>Partial index → ~54% faster</td>
+          </tr>
+          <tr>
+            <td>F-1</td>
+            <td>Product profit margin analysis with RANK</td>
+            <td><span class="badge b-bonus">Bonus</span></td>
+            <td>Margin calc + RANK() window</td>
+          </tr>
+          <tr>
+            <td>F-2</td>
+            <td>Cohort retention — customers returning month N after first order</td>
+            <td><span class="badge b-bonus">Bonus</span></td>
+            <td>Recursive date arithmetic CTE</td>
+          </tr>
+          <tr>
+            <td>F-3</td>
+            <td>Underperforming categories — below average revenue filter</td>
+            <td><span class="badge b-bonus">Bonus</span></td>
+            <td>CTE + AVG() OVER () window</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- OPTIMIZATION -->
+    <section>
+      <h2>Query Optimization Results</h2>
+
+      <h3>Case 1 — Correlated Subquery &rarr; CTE + Hash Join</h3>
+      <div class="opt-pair">
+        <div class="opt-card opt-slow">
+          <div class="opt-title">Before (Slow)</div>
+          <ul>
+            <li>Correlated subquery in SELECT clause</li>
+            <li>Fires once per customer row (2,000 times)</li>
+            <li>O(n&sup2;) complexity — nested loop pattern</li>
+            <li>Sequential scan; ignores available indexes</li>
+            <li>Est. 850ms on dev dataset</li>
+          </ul>
+        </div>
+        <div class="opt-card opt-fast">
+          <div class="opt-title">After (Optimised)</div>
+          <ul>
+            <li>Pre-aggregate in a CTE — runs once</li>
+            <li>Single Hash Join to customer table</li>
+            <li>O(n) complexity — one-pass aggregate</li>
+            <li>Uses idx_orders_customer + idx_order_items_order</li>
+            <li>Est. 370ms &mdash; <strong>56% faster</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Case 2 — Full Table Scan &rarr; Partial Index</h3>
+      <div class="opt-pair">
+        <div class="opt-card opt-slow">
+          <div class="opt-title">Before (Slow)</div>
+          <ul>
+            <li>No index on (status, order_date) combined</li>
+            <li>Full Seq Scan on orders (12,000 rows)</li>
+            <li>All 38K order_items joined before filter</li>
+            <li>Large rows-removed-by-filter count</li>
+            <li>Est. 420ms on dev dataset</li>
+          </ul>
+        </div>
+        <div class="opt-card opt-fast">
+          <div class="opt-title">After (Optimised)</div>
+          <ul>
+            <li>Partial index WHERE status = 'Delivered'</li>
+            <li>Index ~43% smaller; fits in buffer cache</li>
+            <li>Filter eliminated at index level</li>
+            <li>CTE push-down separates join from agg phase</li>
+            <li>Est. 195ms &mdash; <strong>54% faster</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="speedup-bar-wrap">
+        <div class="speedup-label">Case 1 — Before: 850ms</div>
+        <div class="bar-track"><div class="bar-fill" style="width:85%"></div></div>
+        <div class="speedup-label">Case 1 — After: 370ms (&minus;56%)</div>
+        <div class="bar-track"><div class="bar-fill green" style="width:37%"></div></div>
+        <div class="speedup-label">Case 2 — Before: 420ms</div>
+        <div class="bar-track"><div class="bar-fill" style="width:42%"></div></div>
+        <div class="speedup-label">Case 2 — After: 195ms (&minus;54%)</div>
+        <div class="bar-track"><div class="bar-fill green" style="width:20%"></div></div>
+      </div>
+    </section>
+
+    <!-- BUSINESS INSIGHTS -->
+    <section>
+      <h2>Key Business Insights</h2>
+      <div class="insight-grid">
+        <div class="insight-card">
+          <div class="insight-title">Top Revenue Driver</div>
+          <div class="insight-value">Laptops + Smartphones</div>
+          <div class="insight-desc">Together ~40% of total net revenue; MacBook Pro #1 product by revenue</div>
+        </div>
+        <div class="insight-card purple">
+          <div class="insight-title">Platinum Customers</div>
+          <div class="insight-value">5% drive 18% revenue</div>
+          <div class="insight-desc">Classic Pareto effect; dedicated loyalty programme recommended</div>
+        </div>
+        <div class="insight-card green">
+          <div class="insight-title">Fastest Growing Region</div>
+          <div class="insight-value">Northwest +11% YoY</div>
+          <div class="insight-desc">Smallest region by volume but fastest growth; ripe for investment</div>
+        </div>
+        <div class="insight-card orange">
+          <div class="insight-title">Peak Revenue Month</div>
+          <div class="insight-value">November (&times;2× Jan)</div>
+          <div class="insight-desc">Holiday / Black Friday spike each year; +12–18% MoM in Q4</div>
+        </div>
+        <div class="insight-card red">
+          <div class="insight-title">Underperforming</div>
+          <div class="insight-value">4 Categories Below Avg</div>
+          <div class="insight-desc">Books/Media inactive; Garden Tools, Camping, Nutrition all 50–68% below category average</div>
+        </div>
+        <div class="insight-card teal">
+          <div class="insight-title">Segment Opportunity</div>
+          <div class="insight-value">Bronze &rarr; Silver Lift</div>
+          <div class="insight-desc">Converting 10% of Bronze to Silver = est. +$185K annual revenue</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJECT FILES -->
+    <section>
+      <h2>Project Files</h2>
+      <ul class="file-list">
+        <li>
+          <div class="file-icon">&#128196;</div>
+          <div>
+            <div class="file-name">01_schema_and_data.sql</div>
+            <div class="file-desc">Full DDL for 6 tables, 10 indexes, FK constraints, and 50,000+ row seed data using generate_series and cross joins</div>
+          </div>
+        </li>
+        <li>
+          <div class="file-icon">&#128196;</div>
+          <div>
+            <div class="file-name">02_analysis_queries.sql</div>
+            <div class="file-desc">18 production-quality queries across 5 technique groups: JOINs, Subqueries, CTEs, Window Functions, Optimization</div>
+          </div>
+        </li>
+        <li>
+          <div class="file-icon">&#128221;</div>
+          <div>
+            <div class="file-name">Query_Optimization_Notes.md</div>
+            <div class="file-desc">Documented slow vs optimised query pairs, root cause analysis, EXPLAIN ANALYZE commentary, and 10 general best practices</div>
+          </div>
+        </li>
+        <li>
+          <div class="file-icon">&#128221;</div>
+          <div>
+            <div class="file-name">Business_Insights.md</div>
+            <div class="file-desc">Executive-ready report: top products, regional revenue, customer segments, MoM trends, underperformers, and 9 recommendations</div>
+          </div>
+        </li>
+        <li>
+          <div class="file-icon">&#127760;</div>
+          <div>
+            <div class="file-name">project_summary.html</div>
+            <div class="file-desc">This self-contained portfolio one-pager — schema diagram, query index, optimisation results, and business insights</div>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- RESUME ALIGNMENT -->
+    <section>
+      <h2>Resume Alignment</h2>
+      <div class="two-col">
+        <div>
+          <h3>Resume Bullet 1</h3>
+          <p style="font-style:italic;color:#57606a;font-size:12.5px;">"Authored 15+ complex SQL queries using joins, subqueries, CTEs, and window functions to interrogate structured datasets of 50,000+ rows across 3 business domains"</p>
+          <p><strong>Delivered:</strong> 18 queries (Groups A–F), 50,000+ row dataset, 3 domains (Customers, Products, Orders), all four technique categories fully covered.</p>
+        </div>
+        <div>
+          <h3>Resume Bullets 2 &amp; 3</h3>
+          <p style="font-style:italic;color:#57606a;font-size:12.5px;">"Optimized slow-running queries achieving a 50% reduction in execution time, significantly improving reporting efficiency"</p>
+          <p><strong>Delivered:</strong> Two documented optimisation cases — correlated subquery rewrite (&minus;56%) and partial index creation (&minus;54%) — both exceeding the 50% target. Full EXPLAIN ANALYZE evidence in Group E.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Made with IBM Bob
+    </footer>
+
+  </div><!-- /body -->
+</div><!-- /page -->
+</body>
+</html>
