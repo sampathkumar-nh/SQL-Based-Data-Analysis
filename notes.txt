@@ -2,3 +2,4 @@ designed schema for retail domain
 DDL scripts PKs FKs indexes
 data generation 52000+ rows generate_series cross joins
 Group A JOIN queries 5 table join anti-join segment aggregation
+Group B subqueries correlated derived table EXISTS
