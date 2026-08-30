@@ -1,1 +1,2 @@
 designed schema for retail domain
+DDL scripts PKs FKs indexes
