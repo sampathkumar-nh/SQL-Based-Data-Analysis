@@ -1,2 +1,3 @@
 designed schema for retail domain
 DDL scripts PKs FKs indexes
+data generation 52000+ rows generate_series cross joins
