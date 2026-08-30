@@ -6,3 +6,4 @@ Group B subqueries correlated derived table EXISTS
 Group C CTEs monthly trend recursive category CLV chain
 Window functions DENSE_RANK LAG running total NTILE
 Found slow query correlated subquery 2.8s EXPLAIN ANALYZE
+Optimized query CTE pre-aggregation 56% faster
